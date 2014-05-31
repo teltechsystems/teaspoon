@@ -7,14 +7,38 @@ import (
 	"testing"
 )
 
+func TestCombinePacketPayloads(t *testing.T) {
+	Convey("An empty packet array should return an empty payload", t, func() {
+		payload := combinePacketPayloads([]*Packet{})
+		So(payload, ShouldResemble, []byte{})
+	})
+
+	Convey("A single packet in a slice should return an appropriate payload", t, func() {
+		payload := combinePacketPayloads([]*Packet{
+			&Packet{payloadLength: 1, payload: []byte{1}},
+		})
+
+		So(payload, ShouldResemble, []byte{1})
+	})
+
+	Convey("Multiple packets in a slice should return an appropriate payload", t, func() {
+		payload := combinePacketPayloads([]*Packet{
+			&Packet{payloadLength: 1, payload: []byte{1}},
+			&Packet{payloadLength: 2, payload: []byte{2, 3}},
+		})
+
+		So(payload, ShouldResemble, []byte{1, 2, 3})
+	})
+}
+
 func TestReadPacket(t *testing.T) {
-	Convey("A empty packet should result in an error", t, func() {
+	Convey("A empty buffer should result in an error", t, func() {
 		packet, err := ReadPacket(bytes.NewBuffer([]byte{}))
 		So(packet, ShouldBeNil)
 		So(err, ShouldEqual, io.EOF)
 	})
 
-	Convey("A valid header should result in a packet", t, func() {
+	Convey("A buffer containing a valid header should result in a packet", t, func() {
 		valid_packet := bytes.NewBuffer([]byte{
 			0x25, 0x04, 0x00, 0x00,
 			0x00, 0x00, 0x00, 0x01,

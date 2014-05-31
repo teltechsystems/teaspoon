@@ -14,6 +14,25 @@ type Packet struct {
 	payload        []byte
 }
 
+func combinePacketPayloads(packets []*Packet) []byte {
+	payloadLength := int32(0)
+	for i := range packets {
+		payloadLength += packets[i].payloadLength
+	}
+
+	payload := make([]byte, payloadLength)
+
+	offset := int32(0)
+
+	for i := range packets {
+		copy(payload[offset:offset+packets[i].payloadLength], packets[i].payload)
+
+		offset += packets[i].payloadLength
+	}
+
+	return payload
+}
+
 func ReadPacket(r io.Reader) (*Packet, error) {
 	packet := new(Packet)
 	header := make([]byte, 28)
