@@ -1,7 +1,7 @@
 package teaspoon
 
 import (
-	// "fmt"
+	"io"
 	"net"
 )
 
@@ -25,4 +25,8 @@ func (s *Server) Serve(l net.Listener) error {
 }
 
 type conn struct {
+	rwc io.ReadWriteCloser
+}
+
+func (c *conn) serve() {
 }

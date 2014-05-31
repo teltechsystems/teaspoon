@@ -81,6 +81,16 @@ func (l *dummyListener) Close() error {
 	return nil
 }
 
+func TestConnServe(t *testing.T) {
+	reader := bytes.NewBuffer([]byte{})
+	writer := bytes.NewBuffer([]byte{})
+
+	Convey("With a valid connection, serve should be usable", t, func() {
+		conn := &conn{rwc: &dummyConn{Reader: reader, Writer: writer}}
+		conn.serve()
+	})
+}
+
 func TestServerServe(t *testing.T) {
 	server := &Server{}
 
