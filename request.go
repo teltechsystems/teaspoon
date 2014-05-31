@@ -53,11 +53,11 @@ func ReadRequest(r io.Reader) (*Request, error) {
 			return nil, err
 		}
 
+		packets = append(packets, packet)
+
 		if packet.sequence == packet.totalSequences-1 {
 			return constructRequest(packets, packet.requestId)
 		}
-
-		packets = append(packets, packet)
 	}
 
 	return nil, io.EOF
