@@ -82,14 +82,54 @@ func (l *dummyListener) Close() error {
 }
 
 func TestConnServe(t *testing.T) {
-	reader := bytes.NewBuffer([]byte{})
-	writer := bytes.NewBuffer([]byte{})
+	Convey("With a valid connection and an empty buffer, conn should close immediately", t, func() {
+		server := &Server{Handler: nil}
+		reader := bytes.NewBuffer([]byte{})
+		writer := bytes.NewBuffer([]byte{})
 
-	Convey("With a valid connection, serve should be usable", t, func() {
-		conn := &conn{rwc: &dummyConn{Reader: reader, Writer: writer}}
+		rwc := &dummyConn{Reader: reader, Writer: writer}
+		conn := &conn{rwc: rwc, srv: server}
 		conn.serve()
 
 		So(writer.Bytes(), ShouldResemble, []byte{})
+		So(rwc.closed, ShouldBeTrue)
+	})
+
+	Convey("With a valid connection a valid buffer, handler should be called", t, func() {
+		handler_called := make(chan bool, 1)
+		handler := HandlerFunc(func(w ResponseWriter, r *Request) {
+			handler_called <- true
+			w.Write([]byte("HELLO"))
+		})
+		server := &Server{Handler: handler}
+		reader := bytes.NewBuffer([]byte{
+			0x85, 0x04, 0x12, 0x34,
+			0x00, 0x00, 0x00, 0x01,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x01,
+			0x00, 0x00, 0x00, 0x01,
+			0x12,
+		})
+		writer := bytes.NewBuffer([]byte{})
+
+		rwc := &dummyConn{Reader: reader, Writer: writer}
+		conn := &conn{rwc: rwc, srv: server}
+		conn.serve()
+
+		So(<-handler_called, ShouldBeTrue)
+		So(writer.Bytes(), ShouldResemble, []byte{
+			0x85, 0x01, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x01,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x01,
+			0x00, 0x00, 0x00, 0x05,
+			72, 69, 76, 76, 79, // Hello String
+		})
+		So(rwc.closed, ShouldBeTrue)
 	})
 }
 

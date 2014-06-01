@@ -7,6 +7,7 @@ import (
 )
 
 type Request struct {
+	Priority  byte
 	Method    byte
 	Resource  int16
 	RequestID []byte
@@ -36,6 +37,7 @@ func constructRequest(packets []*Packet, requestId []byte) (*Request, error) {
 
 			if packets[i].sequence == packets[i].totalSequences-1 {
 				return &Request{
+					Priority:  packets[i].priority,
 					Method:    packets[i].method,
 					Resource:  packets[i].resource,
 					RequestID: packets[i].requestId,
