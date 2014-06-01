@@ -58,7 +58,7 @@ func TestReadRequest(t *testing.T) {
 
 	Convey("A valid buffer with a single packet should result in an request", t, func() {
 		valid_buffer := bytes.NewBuffer([]byte{
-			0x25, 0x04, 0x00, 0x00,
+			0x25, 0x04, 0x12, 0x34,
 			0x00, 0x00, 0x00, 0x01,
 			0x00, 0x00, 0x00, 0x00,
 			0x00, 0x00, 0x00, 0x00,
@@ -71,6 +71,8 @@ func TestReadRequest(t *testing.T) {
 		request, err := ReadRequest(valid_buffer)
 		So(request, ShouldNotBeNil)
 		So(err, ShouldBeNil)
+		So(request.Method, ShouldEqual, 4)
+		So(request.Resource, ShouldEqual, int16(0x1234))
 		So(request.RequestID, ShouldResemble, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1})
 		So(request.Payload, ShouldResemble, []byte{1})
 	})
@@ -78,7 +80,7 @@ func TestReadRequest(t *testing.T) {
 	Convey("A valid buffer with multiple packets should result in an request", t, func() {
 		valid_buffer := bytes.NewBuffer([]byte{
 			// First Packet In Sequence
-			0x25, 0x04, 0x00, 0x00,
+			0x25, 0x04, 0x12, 0x34,
 			0x00, 0x00, 0x00, 0x02,
 			0x00, 0x00, 0x00, 0x00,
 			0x00, 0x00, 0x00, 0x00,
@@ -87,7 +89,7 @@ func TestReadRequest(t *testing.T) {
 			0x00, 0x00, 0x00, 0x01,
 			0x01,
 			// Second Packet In Sequence
-			0x25, 0x04, 0x00, 0x00,
+			0x25, 0x04, 0x12, 0x34,
 			0x00, 0x01, 0x00, 0x02,
 			0x00, 0x00, 0x00, 0x00,
 			0x00, 0x00, 0x00, 0x00,
@@ -100,6 +102,8 @@ func TestReadRequest(t *testing.T) {
 		request, err := ReadRequest(valid_buffer)
 		So(request, ShouldNotBeNil)
 		So(err, ShouldBeNil)
+		So(request.Method, ShouldEqual, 4)
+		So(request.Resource, ShouldEqual, int16(0x1234))
 		So(request.RequestID, ShouldResemble, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2})
 		So(request.Payload, ShouldResemble, []byte{1, 2, 3})
 	})

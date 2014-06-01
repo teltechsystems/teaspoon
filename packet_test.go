@@ -40,7 +40,7 @@ func TestReadPacket(t *testing.T) {
 
 	Convey("A buffer containing a valid header should result in a packet", t, func() {
 		valid_buffer := bytes.NewBuffer([]byte{
-			0x25, 0x04, 0x00, 0x00,
+			0x25, 0x04, 0x12, 0x34,
 			0x00, 0x00, 0x00, 0x01,
 			0x00, 0x00, 0x00, 0x00,
 			0x00, 0x00, 0x00, 0x00,
@@ -55,6 +55,8 @@ func TestReadPacket(t *testing.T) {
 		So(err, ShouldBeNil)
 		So(packet.opCode, ShouldEqual, 2)
 		So(packet.priority, ShouldEqual, 5)
+		So(packet.method, ShouldEqual, 4)
+		So(packet.resource, ShouldEqual, int16(0x1234))
 		So(packet.sequence, ShouldEqual, 0)
 		So(packet.totalSequences, ShouldEqual, 1)
 		So(packet.requestId, ShouldResemble, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1})

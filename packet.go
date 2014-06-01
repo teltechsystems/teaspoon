@@ -7,6 +7,8 @@ import (
 type Packet struct {
 	opCode         byte
 	priority       byte
+	method         byte
+	resource       int16
 	sequence       int32
 	totalSequences int32
 	requestId      []byte
@@ -48,6 +50,8 @@ func ReadPacket(r io.Reader) (*Packet, error) {
 
 	packet.opCode = (header[0] & 0xF0) >> 4
 	packet.priority = header[0] & 0x0F
+	packet.method = header[1] & 0x0F
+	packet.resource = (int16(header[2]) << 8) + int16(header[3])
 	packet.sequence = (int32(header[4]) << 8) + int32(header[5])
 	packet.totalSequences = (int32(header[6]) << 8) + int32(header[7])
 	packet.requestId = header[8:24]

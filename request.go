@@ -7,6 +7,8 @@ import (
 )
 
 type Request struct {
+	Method    byte
+	Resource  int16
 	RequestID []byte
 	Payload   []byte
 }
@@ -34,6 +36,8 @@ func constructRequest(packets []*Packet, requestId []byte) (*Request, error) {
 
 			if packets[i].sequence == packets[i].totalSequences-1 {
 				return &Request{
+					Method:    packets[i].method,
+					Resource:  packets[i].resource,
 					RequestID: packets[i].requestId,
 					Payload:   combinePacketPayloads(request_packets),
 				}, nil
