@@ -17,8 +17,8 @@ func (s *Server) Serve(l net.Listener) error {
 			return err
 		}
 
-		// No functionality yet
-		rwc.Close()
+		conn := &conn{rwc: rwc}
+		go conn.serve()
 	}
 
 	return nil
@@ -29,4 +29,5 @@ type conn struct {
 }
 
 func (c *conn) serve() {
+	defer c.rwc.Close()
 }

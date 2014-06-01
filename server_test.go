@@ -88,6 +88,8 @@ func TestConnServe(t *testing.T) {
 	Convey("With a valid connection, serve should be usable", t, func() {
 		conn := &conn{rwc: &dummyConn{Reader: reader, Writer: writer}}
 		conn.serve()
+
+		So(writer.Bytes(), ShouldResemble, []byte{})
 	})
 }
 
@@ -106,6 +108,8 @@ func TestServerServe(t *testing.T) {
 		server.Serve(listener)
 		So(listener.index, ShouldEqual, 1)
 
+		<-time.After(time.Millisecond * 1)
+
 		So(listener.closed, ShouldBeTrue)
 		So(listener.conns[0].closed, ShouldBeTrue)
 	})
@@ -121,6 +125,8 @@ func TestServerServe(t *testing.T) {
 		So(listener.index, ShouldEqual, 0)
 		server.Serve(listener)
 		So(listener.index, ShouldEqual, 2)
+
+		<-time.After(time.Millisecond * 1)
 
 		So(listener.closed, ShouldBeTrue)
 		So(listener.conns[0].closed, ShouldBeTrue)
