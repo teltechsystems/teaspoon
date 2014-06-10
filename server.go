@@ -3,8 +3,12 @@ package teaspoon
 import (
 	"bytes"
 	"io"
+	"log"
 	"net"
+	"os"
 )
+
+var logger = log.New(os.Stdout, "[teaspoon] ", 0)
 
 type Handler interface {
 	ServeTSP(ResponseWriter, *Request)
@@ -17,11 +21,25 @@ func (f HandlerFunc) ServeTSP(w ResponseWriter, r *Request) {
 }
 
 type ResponseWriter interface {
+	SetResource(int)
 	Write([]byte) (int, error)
 }
 
 type Server struct {
+	Addr    string
 	Handler Handler
+}
+
+func (srv *Server) ListenAndServe() error {
+	addr := srv.Addr
+	if addr == "" {
+		addr = ":http"
+	}
+	l, e := net.Listen("tcp", addr)
+	if e != nil {
+		return e
+	}
+	return srv.Serve(l)
 }
 
 func (s *Server) Serve(l net.Listener) error {
@@ -40,11 +58,24 @@ func (s *Server) Serve(l net.Listener) error {
 	return nil
 }
 
+func ListenAndServe(addr string, handler Handler) error {
+	server := &Server{Addr: addr, Handler: handler}
+	return server.ListenAndServe()
+}
+
 type response struct {
 	conn  *conn
 	req   *Request
 	reply *Request
 	w     *bytes.Buffer
+}
+
+func (r *response) SetResource(resource int) {
+	if r.reply == nil {
+		r.reply = &Request{Method: 0x01, Resource: 0x00}
+	}
+
+	r.reply.Resource = resource
 }
 
 func (r *response) Write(p []byte) (int, error) {
@@ -57,11 +88,9 @@ func (r *response) finishRequest() {
 	totalSequences := int32(len(payload))/MAX_MTU + 1
 
 	if r.reply == nil {
-		r.reply = &Request{
-			Method:   0x01,
-			Resource: 0x00,
-		}
+		r.reply = &Request{Method: 0x01, Resource: 0x00}
 	}
+
 	for sequence := int32(0); sequence < totalSequences; sequence++ {
 		r.conn.rwc.Write([]byte{
 			0x80 | r.req.Priority, r.reply.Method, byte(r.reply.Resource >> 8), byte(r.reply.Resource),
@@ -69,7 +98,7 @@ func (r *response) finishRequest() {
 		})
 
 		// We must ensure the request ID matches the original request
-		r.conn.rwc.Write(r.req.RequestID)
+		r.conn.rwc.Write(r.req.RequestID[:])
 
 		payloadLength := MAX_MTU
 		if int32(len(payload)) < (sequence+1)*MAX_MTU {
@@ -108,9 +137,11 @@ func (c *conn) serve() {
 	for {
 		responseWriter, err := c.readRequest(c.rwc)
 		if err != nil {
-			if err == io.EOF {
-				return
-			}
+			logger.Printf("Error reading:", err)
+			return
+			// if err == io.EOF {
+			// 	return
+			// }
 		}
 
 		c.srv.Handler.ServeTSP(responseWriter, responseWriter.req)

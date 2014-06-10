@@ -8,23 +8,23 @@ type Packet struct {
 	opCode         byte
 	priority       byte
 	method         byte
-	resource       int16
+	resource       int
 	sequence       int32
 	totalSequences int32
-	requestId      []byte
-	payloadLength  int32
+	requestId      requestId
+	payloadLength  uint32
 	payload        []byte
 }
 
 func combinePacketPayloads(packets []*Packet) []byte {
-	payloadLength := int32(0)
+	payloadLength := uint32(0)
 	for i := range packets {
 		payloadLength += packets[i].payloadLength
 	}
 
 	payload := make([]byte, payloadLength)
 
-	offset := int32(0)
+	offset := uint32(0)
 
 	for i := range packets {
 		copy(payload[offset:offset+packets[i].payloadLength], packets[i].payload)
@@ -41,6 +41,7 @@ func ReadPacket(r io.Reader) (*Packet, error) {
 
 	for total_bytes_read := 0; total_bytes_read < 28; {
 		bytes_read, err := r.Read(header)
+		logger.Printf("ReadPacket - bytes read: %d", bytes_read)
 		if err != nil {
 			return nil, err
 		}
@@ -51,23 +52,27 @@ func ReadPacket(r io.Reader) (*Packet, error) {
 	packet.opCode = (header[0] & 0xF0) >> 4
 	packet.priority = header[0] & 0x0F
 	packet.method = header[1] & 0x0F
-	packet.resource = (int16(header[2]) << 8) + int16(header[3])
+	packet.resource = (int(header[2]) << 8) + int(header[3])
 	packet.sequence = (int32(header[4]) << 8) + int32(header[5])
 	packet.totalSequences = (int32(header[6]) << 8) + int32(header[7])
-	packet.requestId = header[8:24]
-	packet.payloadLength = (int32(header[24]) << 24) + (int32(header[25]) << 16) +
-		(int32(header[26]) << 8) + int32(header[27])
+	copy(packet.requestId[:], header[8:24])
+	packet.payloadLength = (uint32(header[24]) << 24) + (uint32(header[25]) << 16) +
+		(uint32(header[26]) << 8) + uint32(header[27])
 
 	packet.payload = make([]byte, packet.payloadLength)
 
-	for total_bytes_read := int32(0); total_bytes_read < packet.payloadLength; {
+	logger.Printf("ReadPacket - payloadLength: %d", packet.payloadLength)
+
+	for total_bytes_read := uint32(0); total_bytes_read < packet.payloadLength; {
 		bytes_read, err := r.Read(packet.payload)
 		if err != nil {
 			return nil, err
 		}
 
-		total_bytes_read += int32(bytes_read)
+		total_bytes_read += uint32(bytes_read)
 	}
+
+	logger.Printf("ReadPacket - generated packet: %v", packet)
 
 	return packet, nil
 }

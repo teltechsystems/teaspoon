@@ -1,18 +1,23 @@
 package teaspoon
 
 import (
-	"bytes"
 	"errors"
 	"io"
+	"sync"
 )
 
 type Request struct {
 	Priority  byte
 	Method    byte
-	Resource  int16
-	RequestID []byte
+	Resource  int
+	RequestID requestId
 	Payload   []byte
 }
+
+type requestId [16]byte
+
+var readerPackets map[io.Reader](map[requestId][]*Packet)
+var readerPacketsMutex = sync.Mutex{}
 
 var (
 	InvalidPacketSequence = errors.New("Invalid sequence of packets provided")
@@ -20,38 +25,24 @@ var (
 	RequestNotReady       = errors.New("The packets for the request ID are not ready yet")
 )
 
-func constructRequest(packets []*Packet, requestId []byte) (*Request, error) {
+func constructRequest(packets []*Packet) (*Request, error) {
 	if packets == nil {
 		return nil, InvalidPacketSequence
 	}
 
-	if requestId == nil {
-		return nil, InvalidRequestId
-	}
-
-	request_packets := make([]*Packet, 0)
-
-	for i := range packets {
-		if bytes.Compare(packets[i].requestId, requestId) == 0 {
-			request_packets = append(request_packets, packets[i])
-
-			if packets[i].sequence == packets[i].totalSequences-1 {
-				return &Request{
-					Priority:  packets[i].priority,
-					Method:    packets[i].method,
-					Resource:  packets[i].resource,
-					RequestID: packets[i].requestId,
-					Payload:   combinePacketPayloads(request_packets),
-				}, nil
-			}
-		}
-	}
-
-	return nil, RequestNotReady
+	return &Request{
+		Priority:  packets[0].priority,
+		Method:    packets[0].method,
+		Resource:  packets[0].resource,
+		RequestID: packets[0].requestId,
+		Payload:   combinePacketPayloads(packets),
+	}, nil
 }
 
 func ReadRequest(r io.Reader) (*Request, error) {
-	packets := make([]*Packet, 0)
+	if readerPackets == nil {
+		readerPackets = make(map[io.Reader]map[requestId][]*Packet)
+	}
 
 	for {
 		packet, err := ReadPacket(r)
@@ -59,11 +50,22 @@ func ReadRequest(r io.Reader) (*Request, error) {
 			return nil, err
 		}
 
-		packets = append(packets, packet)
+		readerPacketsMutex.Lock()
+		if readerPackets[r] == nil {
+			readerPackets[r] = make(map[requestId][]*Packet)
+		}
+
+		readerPackets[r][packet.requestId] = append(readerPackets[r][packet.requestId], packet)
 
 		if packet.sequence == packet.totalSequences-1 {
-			return constructRequest(packets, packet.requestId)
+			request, err := constructRequest(readerPackets[r][packet.requestId])
+			delete(readerPackets[r], packet.requestId)
+			readerPacketsMutex.Unlock()
+
+			return request, err
 		}
+
+		readerPacketsMutex.Unlock()
 	}
 
 	return nil, io.EOF
