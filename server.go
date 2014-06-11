@@ -130,7 +130,7 @@ func (c *conn) readRequest(r io.Reader) (*response, error) {
 	return &response{
 		conn:  c,
 		req:   req,
-		reply: &Request{Method: 0x01, Resource: 0x00},
+		reply: &Request{OpCode: OPCODE_BINARY, Method: 0x01, Resource: 0x00},
 		w:     bytes.NewBuffer([]byte{}),
 	}, nil
 }
