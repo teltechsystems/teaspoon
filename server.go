@@ -8,7 +8,18 @@ import (
 	"os"
 )
 
-var logger = log.New(os.Stdout, "[teaspoon] ", 0)
+const (
+	OPCODE_CONTINUATION = 0x0
+	OPCODE_TEXT         = 0x1
+	OPCODE_BINARY       = 0x2
+	OPCODE_CLOSE        = 0x8
+	OPCODE_PING         = 0x9
+	OPCODE_PONG         = 0xA
+)
+
+var (
+	logger = log.New(os.Stdout, "[teaspoon] ", 0)
+)
 
 type Handler interface {
 	ServeTSP(ResponseWriter, *Request)
@@ -71,10 +82,6 @@ type response struct {
 }
 
 func (r *response) SetResource(resource int) {
-	if r.reply == nil {
-		r.reply = &Request{Method: 0x01, Resource: 0x00}
-	}
-
 	r.reply.Resource = resource
 }
 
@@ -87,13 +94,9 @@ func (r *response) finishRequest() {
 	payload := r.w.Bytes()
 	totalSequences := int32(len(payload))/MAX_MTU + 1
 
-	if r.reply == nil {
-		r.reply = &Request{Method: 0x01, Resource: 0x00}
-	}
-
 	for sequence := int32(0); sequence < totalSequences; sequence++ {
 		r.conn.rwc.Write([]byte{
-			0x80 | r.req.Priority, r.reply.Method, byte(r.reply.Resource >> 8), byte(r.reply.Resource),
+			(r.reply.OpCode << 4) | r.req.Priority, r.reply.Method, byte(r.reply.Resource >> 8), byte(r.reply.Resource),
 			byte(sequence >> 8), byte(sequence), byte(totalSequences >> 8), byte(totalSequences),
 		})
 
@@ -125,9 +128,10 @@ func (c *conn) readRequest(r io.Reader) (*response, error) {
 	}
 
 	return &response{
-		conn: c,
-		req:  req,
-		w:    bytes.NewBuffer([]byte{}),
+		conn:  c,
+		req:   req,
+		reply: &Request{Method: 0x01, Resource: 0x00},
+		w:     bytes.NewBuffer([]byte{}),
 	}, nil
 }
 
@@ -144,7 +148,13 @@ func (c *conn) serve() {
 			// }
 		}
 
-		c.srv.Handler.ServeTSP(responseWriter, responseWriter.req)
-		responseWriter.finishRequest()
+		switch int(responseWriter.req.OpCode) {
+		case OPCODE_PING:
+			responseWriter.reply.OpCode = OPCODE_PONG
+			responseWriter.finishRequest()
+		default:
+			c.srv.Handler.ServeTSP(responseWriter, responseWriter.req)
+			responseWriter.finishRequest()
+		}
 	}
 }

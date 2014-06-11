@@ -7,6 +7,7 @@ import (
 )
 
 type Request struct {
+	OpCode    byte
 	Priority  byte
 	Method    byte
 	Resource  int
@@ -31,6 +32,7 @@ func constructRequest(packets []*Packet) (*Request, error) {
 	}
 
 	return &Request{
+		OpCode:    packets[0].opCode,
 		Priority:  packets[0].priority,
 		Method:    packets[0].method,
 		Resource:  packets[0].resource,
