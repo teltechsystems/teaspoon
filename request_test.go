@@ -9,25 +9,25 @@ import (
 
 func TestConstructRequest(t *testing.T) {
 	Convey("A nil packet slice should result in an error", t, func() {
-		request, err := constructRequest(nil, nil)
+		request, err := constructRequest(nil)
 		So(request, ShouldBeNil)
 		So(err, ShouldEqual, InvalidPacketSequence)
 	})
 
 	Convey("A nil request ID should result in an error", t, func() {
-		request, err := constructRequest([]*Packet{}, nil)
+		request, err := constructRequest([]*Packet{})
 		So(request, ShouldBeNil)
 		So(err, ShouldEqual, InvalidRequestId)
 	})
 
 	Convey("An array of packets that don't satisfy the request ID should return an error", t, func() {
-		request, err := constructRequest([]*Packet{}, []byte{1})
+		request, err := constructRequest([]*Packet{})
 		So(request, ShouldBeNil)
 		So(err, ShouldEqual, RequestNotReady)
 	})
 
 	Convey("An array of packets that DO satisfy the request ID should return a request", t, func() {
-		requestId := []byte{1}
+		requestId := requestId{1}
 		packets := []*Packet{
 			&Packet{
 				opCode:         2,
@@ -40,7 +40,7 @@ func TestConstructRequest(t *testing.T) {
 			},
 		}
 
-		request, err := constructRequest(packets, []byte{1})
+		request, err := constructRequest(packets)
 		So(request, ShouldNotBeNil)
 		So(err, ShouldBeNil)
 

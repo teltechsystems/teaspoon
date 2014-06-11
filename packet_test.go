@@ -7,6 +7,17 @@ import (
 	"testing"
 )
 
+func BenchmarkCombinePackets(b *testing.B) {
+	packets := []*Packet{
+		&Packet{payloadLength: 1, payload: []byte{'a'}},
+		&Packet{payloadLength: 1, payload: []byte{'b'}},
+	}
+
+	for i := 0; i < b.N; i++ {
+		combinePacketPayloads(packets)
+	}
+}
+
 func TestCombinePacketPayloads(t *testing.T) {
 	Convey("An empty packet array should return an empty payload", t, func() {
 		payload := combinePacketPayloads([]*Packet{})
@@ -29,6 +40,24 @@ func TestCombinePacketPayloads(t *testing.T) {
 
 		So(payload, ShouldResemble, []byte{1, 2, 3})
 	})
+}
+
+func BenchmarkReadPacket(b *testing.B) {
+	valid_buffer := bytes.NewBuffer([]byte{})
+
+	for i := 0; i < b.N; i++ {
+		valid_buffer.Write([]byte{
+			0x25, 0x04, 0x12, 0x34,
+			0x00, 0x00, 0x00, 0x01,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x01,
+			0x00, 0x00, 0x00, 0x01,
+			0x01,
+		})
+		ReadPacket(valid_buffer)
+	}
 }
 
 func TestReadPacket(t *testing.T) {
