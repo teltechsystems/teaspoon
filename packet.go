@@ -41,7 +41,7 @@ func ReadPacket(r io.Reader) (*Packet, error) {
 
 	for total_bytes_read := 0; total_bytes_read < 28; {
 		bytes_read, err := r.Read(header)
-		logger.Printf("ReadPacket - bytes read: %d", bytes_read)
+		// logger.Printf("ReadPacket - bytes read: %d", bytes_read)
 		if err != nil {
 			return nil, err
 		}
@@ -61,7 +61,7 @@ func ReadPacket(r io.Reader) (*Packet, error) {
 
 	packet.payload = make([]byte, packet.payloadLength)
 
-	logger.Printf("ReadPacket - payloadLength: %d", packet.payloadLength)
+	// logger.Printf("ReadPacket - payloadLength: %d", packet.payloadLength)
 
 	for total_bytes_read := uint32(0); total_bytes_read < packet.payloadLength; {
 		bytes_read, err := r.Read(packet.payload)
@@ -72,7 +72,7 @@ func ReadPacket(r io.Reader) (*Packet, error) {
 		total_bytes_read += uint32(bytes_read)
 	}
 
-	logger.Printf("ReadPacket - generated packet: %v", packet)
+	// logger.Printf("ReadPacket - generated packet: %v", packet)
 
 	return packet, nil
 }

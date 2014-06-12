@@ -95,9 +95,9 @@ func (r *response) finishRequest() {
 	payloadLength := len(payload)
 	totalSequences := int32(payloadLength)/MAX_MTU + 1
 
-	logger.Printf("finishRequest - payload : %v", payload)
-	logger.Printf("finishRequest - payloadLength : %v", payloadLength)
-	logger.Printf("finishRequest - totalSequences : %v", totalSequences)
+	// logger.Printf("finishRequest - payload : %v", payload)
+	// logger.Printf("finishRequest - payloadLength : %v", payloadLength)
+	// logger.Printf("finishRequest - totalSequences : %v", totalSequences)
 
 	for sequence := int32(0); sequence < totalSequences; sequence++ {
 		r.conn.rwc.Write([]byte{
@@ -118,7 +118,7 @@ func (r *response) finishRequest() {
 		})
 
 		r.conn.rwc.Write(payload[sequence*MAX_MTU : sequence*MAX_MTU+payloadLength])
-		logger.Printf("finishRequest - chunk written : %v", payload[sequence*MAX_MTU:sequence*MAX_MTU+payloadLength])
+		// logger.Printf("finishRequest - chunk written : %v", payload[sequence*MAX_MTU:sequence*MAX_MTU+payloadLength])
 	}
 }
 
@@ -149,9 +149,6 @@ func (c *conn) serve() {
 		if err != nil {
 			logger.Printf("Error reading:", err)
 			return
-			// if err == io.EOF {
-			// 	return
-			// }
 		}
 
 		switch int(responseWriter.req.OpCode) {
