@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"runtime/debug"
 )
 
 const (
@@ -143,6 +144,12 @@ func (c *conn) readRequest(r io.Reader) (*response, error) {
 
 func (c *conn) serve() {
 	defer c.rwc.Close()
+	defer func() {
+		if r := recover(); r != nil {
+			logger.Printf("Recovered client crash: %s", r)
+			debug.PrintStack()
+		}
+	}()
 
 	for {
 		responseWriter, err := c.readRequest(c.rwc)
