@@ -17,17 +17,17 @@ func TestConstructRequest(t *testing.T) {
 	Convey("A nil request ID should result in an error", t, func() {
 		request, err := constructRequest([]*Packet{})
 		So(request, ShouldBeNil)
-		So(err, ShouldEqual, InvalidRequestId)
+		So(err, ShouldEqual, InvalidPacketSequence)
 	})
 
-	Convey("An array of packets that don't satisfy the request ID should return an error", t, func() {
-		request, err := constructRequest([]*Packet{})
-		So(request, ShouldBeNil)
-		So(err, ShouldEqual, RequestNotReady)
-	})
+	// Convey("An array of packets that don't satisfy the request ID should return an error", t, func() {
+	// 	request, err := constructRequest([]*Packet{})
+	// 	So(request, ShouldBeNil)
+	// 	So(err, ShouldEqual, RequestNotReady)
+	// })
 
 	Convey("An array of packets that DO satisfy the request ID should return a request", t, func() {
-		requestId := requestId{1}
+		requestId := RequestID{1}
 		packets := []*Packet{
 			&Packet{
 				opCode:         2,
@@ -73,7 +73,7 @@ func TestReadRequest(t *testing.T) {
 		So(err, ShouldBeNil)
 		So(request.Method, ShouldEqual, 4)
 		So(request.Resource, ShouldEqual, int16(0x1234))
-		So(request.RequestID, ShouldResemble, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1})
+		So(request.RequestID, ShouldResemble, RequestID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1})
 		So(request.Payload, ShouldResemble, []byte{1})
 	})
 
@@ -104,7 +104,7 @@ func TestReadRequest(t *testing.T) {
 		So(err, ShouldBeNil)
 		So(request.Method, ShouldEqual, 4)
 		So(request.Resource, ShouldEqual, int16(0x1234))
-		So(request.RequestID, ShouldResemble, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2})
+		So(request.RequestID, ShouldResemble, RequestID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2})
 		So(request.Payload, ShouldResemble, []byte{1, 2, 3})
 	})
 }

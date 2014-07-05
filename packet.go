@@ -11,7 +11,7 @@ type Packet struct {
 	resource       int
 	sequence       int32
 	totalSequences int32
-	requestId      requestId
+	requestId      RequestID
 	payloadLength  uint32
 	payload        []byte
 }

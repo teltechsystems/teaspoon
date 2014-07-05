@@ -88,7 +88,7 @@ func TestReadPacket(t *testing.T) {
 		So(packet.resource, ShouldEqual, int16(0x1234))
 		So(packet.sequence, ShouldEqual, 0)
 		So(packet.totalSequences, ShouldEqual, 1)
-		So(packet.requestId, ShouldResemble, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1})
+		So(packet.requestId, ShouldResemble, RequestID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1})
 		So(packet.payloadLength, ShouldEqual, 1)
 		So(packet.payload, ShouldResemble, []byte{1})
 	})

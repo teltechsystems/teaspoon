@@ -91,36 +91,10 @@ func (r *response) Write(p []byte) (int, error) {
 }
 
 func (r *response) finishRequest() {
-	MAX_MTU := int32(1200)
-	payload := r.w.Bytes()
-	payloadLength := len(payload)
-	totalSequences := int32(payloadLength)/MAX_MTU + 1
-
-	// logger.Printf("finishRequest - payload : %v", payload)
-	// logger.Printf("finishRequest - payloadLength : %v", payloadLength)
-	// logger.Printf("finishRequest - totalSequences : %v", totalSequences)
-
-	for sequence := int32(0); sequence < totalSequences; sequence++ {
-		r.conn.rwc.Write([]byte{
-			(r.reply.OpCode << 4) | r.req.Priority, r.reply.Method, byte(r.reply.Resource >> 8), byte(r.reply.Resource),
-			byte(sequence >> 8), byte(sequence), byte(totalSequences >> 8), byte(totalSequences),
-		})
-
-		// We must ensure the request ID matches the original request
-		r.conn.rwc.Write(r.req.RequestID[:])
-
-		payloadLength := MAX_MTU
-		if int32(len(payload)) < (sequence+1)*MAX_MTU {
-			payloadLength = int32(len(payload)) - sequence*MAX_MTU
-		}
-
-		r.conn.rwc.Write([]byte{
-			byte(payloadLength >> 24), byte(payloadLength >> 16), byte(payloadLength >> 8), byte(payloadLength),
-		})
-
-		r.conn.rwc.Write(payload[sequence*MAX_MTU : sequence*MAX_MTU+payloadLength])
-		// logger.Printf("finishRequest - chunk written : %v", payload[sequence*MAX_MTU:sequence*MAX_MTU+payloadLength])
-	}
+	r.reply.RequestID = r.req.RequestID
+	r.reply.Priority = r.req.Priority
+	r.reply.Payload = r.w.Bytes()
+	r.reply.WriteTo(r.conn.rwc)
 }
 
 type conn struct {
