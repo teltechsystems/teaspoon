@@ -18,10 +18,16 @@ func (p *ConnectionPool) OnClientConnect(rwc io.ReadWriteCloser) error {
 }
 
 func (p *ConnectionPool) OnClientDisconnect(rwc io.ReadWriteCloser) {
+	index := -1
+
 	for i := 0; i < len(p.rwcs); i++ {
 		if p.rwcs[i] == rwc {
-			p.rwcs[i] = nil
-			return
+			index = i
+			break
 		}
+	}
+
+	if index != -1 {
+		p.rwcs = append(p.rwcs[0:index], p.rwcs[index+1:len(p.rwcs)]...)
 	}
 }
