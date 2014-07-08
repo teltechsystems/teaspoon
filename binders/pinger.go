@@ -8,23 +8,8 @@ import (
 )
 
 type Pinger struct {
+	ConnectionPool
 	interval time.Duration
-	rwcs     []io.ReadWriteCloser
-	work     chan io.ReadWriteCloser
-}
-
-func (p *Pinger) OnClientConnect(rwc io.ReadWriteCloser) error {
-	p.rwcs = append(p.rwcs, rwc)
-	return nil
-}
-
-func (p *Pinger) OnClientDisconnect(rwc io.ReadWriteCloser) {
-	for i := 0; i < len(p.rwcs); i++ {
-		if p.rwcs[i] == rwc {
-			p.rwcs[i] = nil
-			return
-		}
-	}
 }
 
 func (p *Pinger) processPings() {
@@ -32,9 +17,10 @@ func (p *Pinger) processPings() {
 
 	for {
 		for i := 0; i < int(intervalInt); i++ {
-			for j := i; j < len(p.rwcs); j += int(intervalInt) {
+			connections := p.GetConnections()
+			for j := i; j < len(connections); j += int(intervalInt) {
 				if p.rwcs[j] != nil {
-					p.sendPing(p.rwcs[j])
+					p.sendPing(connections[j])
 				}
 			}
 			time.Sleep(time.Second)
@@ -61,11 +47,7 @@ func (p *Pinger) sendPing(rwc io.ReadWriteCloser) {
 }
 
 func NewPinger(interval time.Duration) *Pinger {
-	pinger := &Pinger{
-		interval: interval,
-		rwcs:     make([]io.ReadWriteCloser, 0),
-		work:     make(chan io.ReadWriteCloser),
-	}
+	pinger := &Pinger{interval: interval}
 
 	go pinger.processPings()
 
