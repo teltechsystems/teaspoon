@@ -28,17 +28,17 @@ func (p *Pinger) OnClientDisconnect(rwc io.ReadWriteCloser) {
 }
 
 func (p *Pinger) processPings() {
-	n := int64(0)
 	intervalInt := int64(p.interval / time.Second)
 
 	for {
-		for i := range p.rwcs {
-			if int64(i)%intervalInt == 0 && p.rwcs[i] != nil {
-				p.sendPing(p.rwcs[i])
+		for i := 0; i < int(intervalInt); i++ {
+			for j := i; j < len(p.rwcs); j += int(intervalInt) {
+				if p.rwcs[j] != nil {
+					p.sendPing(p.rwcs[j])
+				}
 			}
+			time.Sleep(time.Second)
 		}
-		n = (n + 1) % intervalInt
-		time.Sleep(p.interval)
 	}
 }
 

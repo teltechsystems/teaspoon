@@ -135,6 +135,9 @@ func (c *conn) readRequest(r io.Reader) (*response, error) {
 }
 
 func (c *conn) serve() {
+	c.srv.triggerEvent(CLIENT_CONNECT, c.rwc)
+	defer c.srv.triggerEvent(CLIENT_DISCONNECT, c.rwc)
+
 	defer c.rwc.Close()
 	defer func() {
 		if r := recover(); r != nil {
