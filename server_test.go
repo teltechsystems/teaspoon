@@ -133,6 +133,47 @@ func TestConnServe(t *testing.T) {
 	})
 }
 
+type dummyBinder struct {
+	connectCalled    bool
+	disconnectCalled bool
+}
+
+func (b *dummyBinder) OnClientConnect(c io.ReadWriteCloser) error {
+	b.connectCalled = true
+	return nil
+}
+
+func (b *dummyBinder) OnClientDisconnect(c io.ReadWriteCloser) {
+	b.disconnectCalled = true
+}
+
+func TestServerAddBinder(t *testing.T) {
+	server := &Server{}
+
+	Convey("Adding a binder to a server should trigger appropriate events on the binder", t, func() {
+		binder := &dummyBinder{}
+		So(len(server.binders), ShouldEqual, 0)
+		server.AddBinder(binder)
+		So(len(server.binders), ShouldEqual, 1)
+	})
+}
+
+func TestServerTriggerEvent(t *testing.T) {
+	server := &Server{}
+
+	Convey("Adding a binder to a server should trigger appropriate events on the binder", t, func() {
+		binder := &dummyBinder{}
+		server.AddBinder(binder)
+		So(binder.connectCalled, ShouldEqual, false)
+		server.triggerEvent(CLIENT_CONNECT, &dummyConn{})
+		So(binder.connectCalled, ShouldEqual, true)
+
+		So(binder.disconnectCalled, ShouldEqual, false)
+		server.triggerEvent(CLIENT_DISCONNECT, &dummyConn{})
+		So(binder.disconnectCalled, ShouldEqual, true)
+	})
+}
+
 func TestServerServe(t *testing.T) {
 	server := &Server{}
 

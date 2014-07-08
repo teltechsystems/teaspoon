@@ -16,6 +16,8 @@ const (
 	OPCODE_CLOSE        = 0x8
 	OPCODE_PING         = 0x9
 	OPCODE_PONG         = 0xA
+	CLIENT_CONNECT      = 1
+	CLIENT_DISCONNECT   = 2
 )
 
 var (
@@ -40,6 +42,11 @@ type ResponseWriter interface {
 type Server struct {
 	Addr    string
 	Handler Handler
+	binders []Binder
+}
+
+func (srv *Server) AddBinder(b Binder) {
+	srv.binders = append(srv.binders, b)
 }
 
 func (srv *Server) ListenAndServe() error {
@@ -68,6 +75,17 @@ func (s *Server) Serve(l net.Listener) error {
 	}
 
 	return nil
+}
+
+func (s *Server) triggerEvent(eventType int, c io.ReadWriteCloser) {
+	for i := range s.binders {
+		switch eventType {
+		case CLIENT_CONNECT:
+			s.binders[i].OnClientConnect(c)
+		case CLIENT_DISCONNECT:
+			s.binders[i].OnClientDisconnect(c)
+		}
+	}
 }
 
 func ListenAndServe(addr string, handler Handler) error {
