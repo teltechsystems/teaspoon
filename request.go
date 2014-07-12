@@ -17,44 +17,41 @@ type Request struct {
 	Payload   []byte
 }
 
-func (r *Request) WriteTo(w io.Writer) (n int64, err error) {
-	MAX_MTU := int32(1200)
+func (r *Request) GetFrames(frameSize int32) [][]byte {
 	payload := r.Payload
-	totalSequences := int32(len(payload))/MAX_MTU + 1
+	totalSequences := int32(len(payload))/frameSize + 1
 
-	var bw int
+	frames := [][]byte{}
 
 	for sequence := int32(0); sequence < totalSequences; sequence++ {
-		bw, err = w.Write([]byte{
+		payloadLength := frameSize
+		if int32(len(payload)) < (sequence+1)*frameSize {
+			payloadLength = int32(len(payload)) - sequence*frameSize
+		}
+
+		frame := []byte{
 			(r.OpCode << 4) | r.Priority, r.Method, byte(r.Resource >> 8), byte(r.Resource),
 			byte(sequence >> 8), byte(sequence), byte(totalSequences >> 8), byte(totalSequences),
-		})
-		n += int64(bw)
-		if err != nil {
-			return n, err
 		}
-
-		// We must ensure the request ID matches the original request
-		bw, err = w.Write(r.RequestID[:])
-		n += int64(bw)
-		if err != nil {
-			return n, err
-		}
-
-		payloadLength := MAX_MTU
-		if int32(len(payload)) < (sequence+1)*MAX_MTU {
-			payloadLength = int32(len(payload)) - sequence*MAX_MTU
-		}
-
-		bw, err = w.Write([]byte{
+		frame = append(frame, r.RequestID[:]...)
+		frame = append(frame, []byte{
 			byte(payloadLength >> 24), byte(payloadLength >> 16), byte(payloadLength >> 8), byte(payloadLength),
-		})
+		}...)
+		frame = append(frame, payload[sequence*frameSize:sequence*frameSize+payloadLength]...)
+
+		frames = append(frames, frame)
+	}
+
+	return frames
+}
+
+func (r *Request) WriteTo(w io.Writer) (n int64, err error) {
+	for _, frame := range r.GetFrames(1200) {
+		bw, err := w.Write(frame)
 		n += int64(bw)
 		if err != nil {
 			return n, err
 		}
-
-		w.Write(payload[sequence*MAX_MTU : sequence*MAX_MTU+payloadLength])
 	}
 
 	return n, err
