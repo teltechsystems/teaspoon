@@ -183,6 +183,7 @@ func (c *conn) serve() {
 		case <-c.quitChan:
 			return
 		case frame := <-c.frameChan:
+			logger.Println("Writing a frame:", frame)
 			c.rwc.Write(frame)
 		}
 	}
