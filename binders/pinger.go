@@ -19,7 +19,7 @@ func (p *Pinger) processPings() {
 		for i := 0; i < int(intervalInt); i++ {
 			connections := p.GetConnections()
 			for j := i; j < len(connections); j += int(intervalInt) {
-				if p.rwcs[j] != nil {
+				if p.writers[j] != nil {
 					p.sendPing(connections[j])
 				}
 			}
@@ -28,7 +28,7 @@ func (p *Pinger) processPings() {
 	}
 }
 
-func (p *Pinger) sendPing(rwc io.ReadWriteCloser) {
+func (p *Pinger) sendPing(w io.Writer) {
 	requestID := teaspoon.RequestID{}
 	for i := 0; i < 16; i++ {
 		requestID[i] = byte(rand.Intn(16))
@@ -43,7 +43,7 @@ func (p *Pinger) sendPing(rwc io.ReadWriteCloser) {
 		Payload:   []byte{},
 	}
 
-	r.WriteTo(rwc)
+	r.WriteTo(w)
 }
 
 func NewPinger(interval time.Duration) *Pinger {
