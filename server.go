@@ -147,9 +147,7 @@ func (c *conn) readRequest(r io.Reader) (*response, error) {
 }
 
 func (c *conn) Write(p []byte) (int, error) {
-	logger.Println("Writing directly to the frame chan:", p)
 	c.frameChan <- p
-	logger.Println("Wrote directly to the frame chan:", p)
 
 	return len(p), nil
 }
