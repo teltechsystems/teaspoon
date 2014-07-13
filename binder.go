@@ -5,6 +5,6 @@ import (
 )
 
 type Binder interface {
-	OnClientConnect(c io.ReadWriteCloser) error
-	OnClientDisconnect(c io.ReadWriteCloser)
+	OnClientConnect(c io.Writer) error
+	OnClientDisconnect(c io.Writer)
 }

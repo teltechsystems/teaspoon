@@ -81,6 +81,19 @@ func (l *dummyListener) Close() error {
 	return nil
 }
 
+func TestConnWrite(t *testing.T) {
+	Convey("Writing to the conn should stack to the frame chan", t, func() {
+		reader := bytes.NewBuffer([]byte{})
+		writer := bytes.NewBuffer([]byte{})
+
+		rwc := &dummyConn{Reader: reader, Writer: writer}
+		conn := &conn{rwc: rwc, srv: nil, frameChan: make(chan []byte, 10), quitChan: make(chan bool)}
+		conn.Write([]byte("HELLO WORLD"))
+
+		So(<-conn.frameChan, ShouldResemble, []byte("HELLO WORLD"))
+	})
+}
+
 func TestConnServe(t *testing.T) {
 	Convey("With a valid connection and an empty buffer, conn should close immediately", t, func() {
 		server := &Server{Handler: nil}
@@ -88,7 +101,7 @@ func TestConnServe(t *testing.T) {
 		writer := bytes.NewBuffer([]byte{})
 
 		rwc := &dummyConn{Reader: reader, Writer: writer}
-		conn := &conn{rwc: rwc, srv: server}
+		conn := &conn{rwc: rwc, srv: server, frameChan: make(chan []byte, 10), quitChan: make(chan bool)}
 		conn.serve()
 
 		So(writer.Bytes(), ShouldResemble, []byte{})
@@ -115,7 +128,7 @@ func TestConnServe(t *testing.T) {
 		writer := bytes.NewBuffer([]byte{})
 
 		rwc := &dummyConn{Reader: reader, Writer: writer}
-		conn := &conn{rwc: rwc, srv: server}
+		conn := &conn{rwc: rwc, srv: server, frameChan: make(chan []byte, 10), quitChan: make(chan bool)}
 		conn.serve()
 
 		So(<-handler_called, ShouldBeTrue)
@@ -138,12 +151,12 @@ type dummyBinder struct {
 	disconnectCalled bool
 }
 
-func (b *dummyBinder) OnClientConnect(c io.ReadWriteCloser) error {
+func (b *dummyBinder) OnClientConnect(c io.Writer) error {
 	b.connectCalled = true
 	return nil
 }
 
-func (b *dummyBinder) OnClientDisconnect(c io.ReadWriteCloser) {
+func (b *dummyBinder) OnClientDisconnect(c io.Writer) {
 	b.disconnectCalled = true
 }
 

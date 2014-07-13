@@ -70,14 +70,19 @@ func (s *Server) Serve(l net.Listener) error {
 			return err
 		}
 
-		conn := &conn{rwc: rwc, srv: s}
+		conn := &conn{
+			rwc:       rwc,
+			srv:       s,
+			frameChan: make(chan []byte, 10),
+			quitChan:  make(chan bool),
+		}
 		go conn.serve()
 	}
 
 	return nil
 }
 
-func (s *Server) triggerEvent(eventType int, c io.ReadWriteCloser) {
+func (s *Server) triggerEvent(eventType int, c io.Writer) {
 	for i := range s.binders {
 		switch eventType {
 		case CLIENT_CONNECT:
@@ -112,12 +117,14 @@ func (r *response) finishRequest() {
 	r.reply.RequestID = r.req.RequestID
 	r.reply.Priority = r.req.Priority
 	r.reply.Payload = r.w.Bytes()
-	r.reply.WriteTo(r.conn.rwc)
+	r.reply.WriteTo(r.conn)
 }
 
 type conn struct {
-	rwc io.ReadWriteCloser
-	srv *Server
+	rwc       io.ReadWriteCloser
+	srv       *Server
+	frameChan chan []byte
+	quitChan  chan bool
 }
 
 func (c *conn) readRequest(r io.Reader) (*response, error) {
@@ -134,9 +141,14 @@ func (c *conn) readRequest(r io.Reader) (*response, error) {
 	}, nil
 }
 
+func (c *conn) Write(p []byte) (int, error) {
+	c.frameChan <- p
+	return len(p), nil
+}
+
 func (c *conn) serve() {
-	c.srv.triggerEvent(CLIENT_CONNECT, c.rwc)
-	defer c.srv.triggerEvent(CLIENT_DISCONNECT, c.rwc)
+	c.srv.triggerEvent(CLIENT_CONNECT, c)
+	defer c.srv.triggerEvent(CLIENT_DISCONNECT, c)
 
 	defer c.rwc.Close()
 	defer func() {
@@ -146,20 +158,32 @@ func (c *conn) serve() {
 		}
 	}()
 
-	for {
-		responseWriter, err := c.readRequest(c.rwc)
-		if err != nil {
-			logger.Printf("Error reading:", err)
-			return
-		}
+	go func() {
+		for {
+			responseWriter, err := c.readRequest(c.rwc)
+			if err != nil {
+				logger.Printf("Error reading:", err)
+				c.quitChan <- true
+				return
+			}
 
-		switch int(responseWriter.req.OpCode) {
-		case OPCODE_PING:
-			responseWriter.reply.OpCode = OPCODE_PONG
-			responseWriter.finishRequest()
-		default:
-			c.srv.Handler.ServeTSP(responseWriter, responseWriter.req)
-			responseWriter.finishRequest()
+			switch int(responseWriter.req.OpCode) {
+			case OPCODE_PING:
+				responseWriter.reply.OpCode = OPCODE_PONG
+				responseWriter.finishRequest()
+			default:
+				c.srv.Handler.ServeTSP(responseWriter, responseWriter.req)
+				responseWriter.finishRequest()
+			}
+		}
+	}()
+
+	for {
+		select {
+		case <-c.quitChan:
+			return
+		case frame := <-c.frameChan:
+			c.rwc.Write(frame)
 		}
 	}
 }

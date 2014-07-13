@@ -34,9 +34,7 @@ func (r *Request) GetFrames(frameSize int32) [][]byte {
 			byte(sequence >> 8), byte(sequence), byte(totalSequences >> 8), byte(totalSequences),
 		}
 		frame = append(frame, r.RequestID[:]...)
-		frame = append(frame, []byte{
-			byte(payloadLength >> 24), byte(payloadLength >> 16), byte(payloadLength >> 8), byte(payloadLength),
-		}...)
+		frame = append(frame, []byte{byte(payloadLength >> 24), byte(payloadLength >> 16), byte(payloadLength >> 8), byte(payloadLength)}...)
 		frame = append(frame, payload[sequence*frameSize:sequence*frameSize+payloadLength]...)
 
 		frames = append(frames, frame)
