@@ -36,6 +36,7 @@ func (f HandlerFunc) ServeTSP(w ResponseWriter, r *Request) {
 
 type ResponseWriter interface {
 	SetResource(int)
+	GetDirectWriter() io.Writer
 	Write([]byte) (int, error)
 }
 
@@ -103,6 +104,10 @@ type response struct {
 	req   *Request
 	reply *Request
 	w     *bytes.Buffer
+}
+
+func (r *response) GetDirectWriter() io.Writer {
+	return r.conn
 }
 
 func (r *response) SetResource(resource int) {
