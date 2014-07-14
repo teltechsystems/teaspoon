@@ -190,7 +190,8 @@ func (c *conn) serve() {
 			return
 		case frame := <-c.frameChan:
 			logger.Println("Writing a frame:", frame)
-			c.rwc.Write(frame)
+			bytesWritten, err := c.rwc.Write(frame)
+			logger.Println("Wanted to write", len(frame), "bytes. We ended up writing", bytesWritten, "with this error", err)
 		}
 	}
 }
