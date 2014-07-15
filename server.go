@@ -150,7 +150,7 @@ func (c *conn) readRequest(r io.Reader) (*response, error) {
 
 func (c *conn) Write(p []byte) (int, error) {
 	if c.closed {
-		return nil, errors.New("The client has disconnected")
+		return 0, errors.New("The client has disconnected")
 	}
 
 	c.frameChan <- p
