@@ -155,7 +155,7 @@ func (c *conn) Write(p []byte) (int, error) {
 
 	c.frameChan <- p
 
-	return len(p), err
+	return len(p), nil
 }
 
 func (c *conn) serve() {
