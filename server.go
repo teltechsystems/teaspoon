@@ -2,6 +2,7 @@ package teaspoon
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"log"
 	"net"
@@ -147,9 +148,23 @@ func (c *conn) readRequest(r io.Reader) (*response, error) {
 }
 
 func (c *conn) Write(p []byte) (int, error) {
+	var (
+		bytesWritten int
+		err          error
+	)
+
+	bytesWritten = len(p)
+
+	defer func() {
+		if r := recover(); r != nil {
+			err = errors.New("The client has disconnected")
+		}
+		bytesWritten = 0
+	}()
+
 	c.frameChan <- p
 
-	return len(p), nil
+	return bytesWritten, err
 }
 
 func (c *conn) serve() {
