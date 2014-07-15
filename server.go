@@ -131,6 +131,7 @@ type conn struct {
 	srv       *Server
 	frameChan chan []byte
 	quitChan  chan bool
+	closed    bool
 }
 
 func (c *conn) readRequest(r io.Reader) (*response, error) {
@@ -148,45 +149,42 @@ func (c *conn) readRequest(r io.Reader) (*response, error) {
 }
 
 func (c *conn) Write(p []byte) (int, error) {
-	var (
-		bytesWritten int
-		err          error
-	)
-
-	bytesWritten = len(p)
-
-	defer func() {
-		if r := recover(); r != nil {
-			err = errors.New("The client has disconnected")
-		}
-		bytesWritten = 0
-	}()
+	if c.closed {
+		return nil, errors.New("The client has disconnected")
+	}
 
 	c.frameChan <- p
 
-	return bytesWritten, err
+	return len(p), err
 }
 
 func (c *conn) serve() {
 	c.srv.triggerEvent(CLIENT_CONNECT, c)
 
+	logger.Println("conn.serve: Connected client:", c)
+
 	defer func() {
+		logger.Println("conn.serve: Client has disconnected:", c)
+
 		if r := recover(); r != nil {
 			logger.Printf("Recovered client crash: %s", r)
 			debug.PrintStack()
 		}
 
+		c.closed = true
 		close(c.quitChan)
 		close(c.frameChan)
 		c.srv.triggerEvent(CLIENT_DISCONNECT, c)
 		c.rwc.Close()
+
+		logger.Println("conn.serve: Client has disconnected:", c, "Done cleaning up")
 	}()
 
 	go func() {
 		for {
 			responseWriter, err := c.readRequest(c.rwc)
 			if err != nil {
-				logger.Printf("Error reading:", err)
+				logger.Printf("conn.Serve: Error reading:", err)
 				c.quitChan <- true
 				return
 			}
