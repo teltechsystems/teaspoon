@@ -154,14 +154,17 @@ func (c *conn) Write(p []byte) (int, error) {
 
 func (c *conn) serve() {
 	c.srv.triggerEvent(CLIENT_CONNECT, c)
-	defer c.srv.triggerEvent(CLIENT_DISCONNECT, c)
 
-	defer c.rwc.Close()
 	defer func() {
 		if r := recover(); r != nil {
 			logger.Printf("Recovered client crash: %s", r)
 			debug.PrintStack()
 		}
+
+		close(c.quitChan)
+		close(c.frameChan)
+		c.srv.triggerEvent(CLIENT_DISCONNECT, c)
+		c.rwc.Close()
 	}()
 
 	go func() {
