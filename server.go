@@ -152,8 +152,8 @@ func (c *conn) readRequest(r io.Reader) (*response, error) {
 }
 
 func (c *conn) Write(p []byte) (int, error) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	// c.mu.Lock()
+	// defer c.mu.Unlock()
 
 	if c.closed {
 		return 0, errors.New("The client has disconnected")
@@ -177,8 +177,8 @@ func (c *conn) serve() {
 			debug.PrintStack()
 		}
 
-		c.mu.Lock()
-		defer c.mu.Unlock()
+		// c.mu.Lock()
+		// defer c.mu.Unlock()
 
 		c.closed = true
 		close(c.quitChan)
