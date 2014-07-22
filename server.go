@@ -138,9 +138,6 @@ type conn struct {
 }
 
 func (c *conn) readRequest(r io.Reader) (*response, error) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
 	req, err := ReadRequest(r)
 	if err != nil {
 		return nil, err
