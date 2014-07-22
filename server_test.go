@@ -6,6 +6,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 	"io"
 	"net"
+	"sync"
 	"testing"
 	"time"
 )
@@ -87,7 +88,7 @@ func TestConnWrite(t *testing.T) {
 		writer := bytes.NewBuffer([]byte{})
 
 		rwc := &dummyConn{Reader: reader, Writer: writer}
-		conn := &conn{rwc: rwc, srv: nil, frameChan: make(chan []byte, 10), quitChan: make(chan bool)}
+		conn := &conn{rwc: rwc, srv: nil, frameChan: make(chan []byte, 10), quitChan: make(chan bool), mu: &sync.Mutex{}}
 		conn.Write([]byte("HELLO WORLD"))
 
 		So(<-conn.frameChan, ShouldResemble, []byte("HELLO WORLD"))
@@ -101,7 +102,7 @@ func TestConnServe(t *testing.T) {
 		writer := bytes.NewBuffer([]byte{})
 
 		rwc := &dummyConn{Reader: reader, Writer: writer}
-		conn := &conn{rwc: rwc, srv: server, frameChan: make(chan []byte, 10), quitChan: make(chan bool)}
+		conn := &conn{rwc: rwc, srv: server, frameChan: make(chan []byte, 10), quitChan: make(chan bool), mu: &sync.Mutex{}}
 		conn.serve()
 
 		So(writer.Bytes(), ShouldResemble, []byte{})
@@ -128,7 +129,7 @@ func TestConnServe(t *testing.T) {
 		writer := bytes.NewBuffer([]byte{})
 
 		rwc := &dummyConn{Reader: reader, Writer: writer}
-		conn := &conn{rwc: rwc, srv: server, frameChan: make(chan []byte, 10), quitChan: make(chan bool)}
+		conn := &conn{rwc: rwc, srv: server, frameChan: make(chan []byte, 10), quitChan: make(chan bool), mu: &sync.Mutex{}}
 		conn.serve()
 
 		So(<-handler_called, ShouldBeTrue)
