@@ -8,7 +8,6 @@ import (
 	"net"
 	"os"
 	"runtime/debug"
-	"sync"
 )
 
 const (
@@ -78,7 +77,6 @@ func (s *Server) Serve(l net.Listener) error {
 			srv:       s,
 			frameChan: make(chan []byte, 10),
 			quitChan:  make(chan bool),
-			mu:        &sync.Mutex{},
 		}
 		go conn.serve()
 	}
@@ -134,7 +132,6 @@ type conn struct {
 	frameChan chan []byte
 	quitChan  chan bool
 	closed    bool
-	mu        *sync.Mutex
 }
 
 func (c *conn) readRequest(r io.Reader) (*response, error) {
@@ -152,9 +149,6 @@ func (c *conn) readRequest(r io.Reader) (*response, error) {
 }
 
 func (c *conn) Write(p []byte) (int, error) {
-	// c.mu.Lock()
-	// defer c.mu.Unlock()
-
 	if c.closed {
 		return 0, errors.New("The client has disconnected")
 	}
@@ -176,9 +170,6 @@ func (c *conn) serve() {
 			logger.Printf("Recovered client crash: %s", r)
 			debug.PrintStack()
 		}
-
-		// c.mu.Lock()
-		// defer c.mu.Unlock()
 
 		c.closed = true
 		close(c.quitChan)
