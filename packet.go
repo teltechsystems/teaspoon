@@ -1,7 +1,12 @@
 package teaspoon
 
 import (
+	"errors"
 	"io"
+)
+
+var (
+	PacketPayloadLengthExceeded = errors.New("The payload's packet length is too large")
 )
 
 type Packet struct {
@@ -59,10 +64,13 @@ func ReadPacket(r io.Reader) (*Packet, error) {
 	packet.payloadLength = (uint32(header[24]) << 24) + (uint32(header[25]) << 16) +
 		(uint32(header[26]) << 8) + uint32(header[27])
 
-	packet.payload = make([]byte, packet.payloadLength)
-
 	// logger.Printf("ReadPacket - payloadLength: %d", packet.payloadLength)
 
+	if packet.payloadLength > 1200 {
+		return nil, PacketPayloadLengthExceeded
+	}
+
+	packet.payload = make([]byte, packet.payloadLength)
 	for total_bytes_read := uint32(0); total_bytes_read < packet.payloadLength; {
 		bytes_read, err := r.Read(packet.payload)
 		if err != nil {

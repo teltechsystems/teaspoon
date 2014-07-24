@@ -73,14 +73,16 @@ func (s *Server) Serve(l net.Listener) error {
 			return err
 		}
 
-		conn := &conn{
-			rwc:       rwc,
-			srv:       s,
-			frameChan: make(chan []byte, 10),
-			quitChan:  make(chan bool),
-			mu:        &sync.Mutex{},
-		}
-		go conn.serve()
+		go func() {
+			conn := &conn{
+				rwc:       rwc,
+				srv:       s,
+				frameChan: make(chan []byte, 10),
+				quitChan:  make(chan bool),
+				mu:        &sync.Mutex{},
+			}
+			conn.serve()
+		}()
 	}
 
 	return nil
@@ -140,6 +142,15 @@ type conn struct {
 func (c *conn) readRequest(r io.Reader) (*response, error) {
 	req, err := ReadRequest(r)
 	if err != nil {
+		readerPacketsMutex.Lock()
+
+		for k, _ := range readerPackets[r] {
+			delete(readerPackets[r], k)
+		}
+		delete(readerPackets, r)
+
+		readerPacketsMutex.Unlock()
+
 		return nil, err
 	}
 
@@ -186,14 +197,17 @@ func (c *conn) serve() {
 		c.srv.triggerEvent(CLIENT_DISCONNECT, c)
 		c.rwc.Close()
 
-		logger.Println("conn.serve: Client has disconnected:", c, "Done cleaning up")
+		// logger.Println("conn.serve: Client has disconnected:", c, "Done cleaning up")
 	}()
 
 	go func() {
 		for {
 			responseWriter, err := c.readRequest(c.rwc)
 			if err != nil {
-				logger.Printf("conn.Serve: Error reading:", err)
+				if err != io.EOF {
+					logger.Printf("conn.Serve: Error reading:", err)
+				}
+
 				c.quitChan <- true
 				return
 			}
@@ -214,9 +228,7 @@ func (c *conn) serve() {
 		case <-c.quitChan:
 			return
 		case frame := <-c.frameChan:
-			logger.Println("Writing a frame:", frame)
-			bytesWritten, err := c.rwc.Write(frame)
-			logger.Println("Wanted to write", len(frame), "bytes. We ended up writing", bytesWritten, "with this error", err)
+			c.rwc.Write(frame)
 		}
 	}
 }

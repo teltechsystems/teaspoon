@@ -80,8 +80,8 @@ func TestReadPacket(t *testing.T) {
 		})
 
 		packet, err := ReadPacket(valid_buffer)
-		So(packet, ShouldNotBeNil)
 		So(err, ShouldBeNil)
+		So(packet, ShouldNotBeNil)
 		So(packet.opCode, ShouldEqual, 2)
 		So(packet.priority, ShouldEqual, 5)
 		So(packet.method, ShouldEqual, 4)
@@ -91,5 +91,21 @@ func TestReadPacket(t *testing.T) {
 		So(packet.requestId, ShouldResemble, RequestID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1})
 		So(packet.payloadLength, ShouldEqual, 1)
 		So(packet.payload, ShouldResemble, []byte{1})
+	})
+
+	Convey("A packet with a payload larger than 1200 bytes should return an error", t, func() {
+		valid_buffer := bytes.NewBuffer([]byte{
+			0x25, 0x04, 0x12, 0x34,
+			0x00, 0x00, 0x00, 0x01,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x01,
+			0xFF, 0xFF, 0xFF, 0xFF,
+			0x01,
+		})
+		packet, err := ReadPacket(valid_buffer)
+		So(packet, ShouldBeNil)
+		So(err, ShouldEqual, PacketPayloadLengthExceeded)
 	})
 }
