@@ -72,7 +72,7 @@ func ReadPacket(r io.Reader) (*Packet, error) {
 
 	packet.payload = make([]byte, packet.payloadLength)
 	for total_bytes_read := uint32(0); total_bytes_read < packet.payloadLength; {
-		bytes_read, err := r.Read(packet.payload)
+		bytes_read, err := r.Read(packet.payload[total_bytes_read:])
 		if err != nil {
 			return nil, err
 		}

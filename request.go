@@ -84,9 +84,11 @@ func constructRequest(packets []*Packet) (*Request, error) {
 }
 
 func ReadRequest(r io.Reader) (*Request, error) {
+	readerPacketsMutex.Lock()
 	if readerPackets == nil {
 		readerPackets = make(map[io.Reader]map[RequestID][]*Packet)
 	}
+	readerPacketsMutex.Unlock()
 
 	for {
 		packet, err := ReadPacket(r)

@@ -80,6 +80,7 @@ func (s *Server) Serve(l net.Listener) error {
 				frameChan: make(chan []byte, 10),
 				quitChan:  make(chan bool),
 				mu:        &sync.Mutex{},
+				buffer:    bytes.NewBuffer([]byte{}),
 			}
 			conn.serve()
 		}()
@@ -137,6 +138,7 @@ type conn struct {
 	quitChan  chan bool
 	closed    bool
 	mu        *sync.Mutex
+	buffer    *bytes.Buffer
 }
 
 func (c *conn) readRequest(r io.Reader) (*response, error) {
@@ -154,11 +156,13 @@ func (c *conn) readRequest(r io.Reader) (*response, error) {
 		return nil, err
 	}
 
+	c.buffer.Reset()
+
 	return &response{
 		conn:  c,
 		req:   req,
 		reply: &Request{OpCode: OPCODE_BINARY, Method: 0x01, Resource: 0x00},
-		w:     bytes.NewBuffer([]byte{}),
+		w:     c.buffer,
 	}, nil
 }
 
