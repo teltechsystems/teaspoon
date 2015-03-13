@@ -37,6 +37,7 @@ func (f HandlerFunc) ServeTSP(w ResponseWriter, r *Request) {
 }
 
 type ResponseWriter interface {
+	SetMethod(byte)
 	SetResource(int)
 	GetDirectWriter() io.Writer
 	Write([]byte) (int, error)
@@ -114,6 +115,11 @@ type response struct {
 
 func (r *response) GetDirectWriter() io.Writer {
 	return r.conn
+}
+
+func (r *response) SetMethod(method byte) {
+	logger.Println("Setting method", method)
+	r.reply.Method = method
 }
 
 func (r *response) SetResource(resource int) {
@@ -221,8 +227,11 @@ func (c *conn) serve() {
 				responseWriter.reply.OpCode = OPCODE_PONG
 				responseWriter.finishRequest()
 			default:
-				c.srv.Handler.ServeTSP(responseWriter, responseWriter.req)
-				responseWriter.finishRequest()
+				go func(c *conn, responseWriter *response) {
+					logger.Println("Spawning handler goroutine")
+					c.srv.Handler.ServeTSP(responseWriter, responseWriter.req)
+					responseWriter.finishRequest()
+				}(c, responseWriter)
 			}
 		}
 	}()
